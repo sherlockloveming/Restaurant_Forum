@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs')
 const db = require('../models')
 const User = db.User
 const Favorite = db.Favorite
+const Like = db.Like
 
 const userController = {
   signUpPage: (req, res) => {
@@ -63,6 +64,29 @@ const userController = {
     })
       .then((favorite) => {
         favorite.destroy()
+          .then((restaurant) => {
+            return res.redirect('back')
+          })
+      })
+  },
+  like: (req, res) => {
+    return Like.create({
+      UserId: req.user.id,
+      RestaurantId: req.params.restaurantId
+    })
+      .then((restaurant) => {
+        return res.redirect('back')
+      })
+  },
+  Unlike: (req, res) => {
+    return Like.findOne({
+      where: {
+        UserId: req.user.id,
+        RestaurantId: req.params.restaurantId
+      }
+    })
+      .then((like) => {
+        like.destroy()
           .then((restaurant) => {
             return res.redirect('back')
           })
