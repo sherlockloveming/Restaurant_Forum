@@ -16,7 +16,7 @@ let restController = {
       categoryId = Number(req.query.categoryId)
       whereQuery['categoryId'] = categoryId
     }
-    Restaurant.findAndCountAll({ nest: true, raw: true, include: Category, where: whereQuery, offset: offset, limit: pageLimit }).then(result => {
+    Restaurant.findAndCountAll({ include: Category, where: whereQuery, offset: offset, limit: pageLimit }).then(result => {
       // data for pagination
       let page = Number(req.query.page) || 1
       let pages = Math.ceil(result.count / pageLimit)
@@ -25,12 +25,13 @@ let restController = {
       let next = page + 1 > pages ? pages : page + 1
       // clean up restaurant data
       const data = result.rows.map(r => ({
-        ...r,
-        description: r.description.substring(0, 50)
+        ...r.dataValues,
+        description: r.description.substring(0, 50),
+        isFavorited: req.user.FavoritedRestaurants.map(d => d.id).includes(r.id)
       }))
       Category.findAll({ raw: true }).then(categories => {
         return res.render('restaurants', {
-          restaurants: data,
+          restaurants: JSON.parse(JSON.stringify(data)),
           categories: categories,
           categoryId: categoryId,
           page: page,
@@ -43,11 +44,13 @@ let restController = {
   },
   getRestaurant: (req, res) => {
     return Restaurant.findByPk(req.params.id, {
-      include: [Category, { model: Comment, include: [User] }]
+      include: [Category, { model: User, as: 'FavoritedUsers' }, { model: Comment, include: [User] }]
     }).then(restaurant => {
-      return res.render('restaurant', JSON.parse(JSON.stringify({
-        restaurant: restaurant
-      })))
+      const isFavorited = restaurant.FavoritedUsers.map(d => d.id).includes(req.user.id)
+      return res.render('restaurant', {
+        restaurant: JSON.parse(JSON.stringify(restaurant)),
+        isFavorited: isFavorited,
+      })
     })
   },
   getFeeds: (req, res) => {
